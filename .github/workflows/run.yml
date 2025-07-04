@@ -10,7 +10,7 @@ on:
         type: string
 
 jobs:
-  download_firmware:
+  unpack:
     runs-on: ubuntu-latest
     steps:
 
@@ -19,7 +19,7 @@ jobs:
       - name: Install tools
         run: |
           sudo apt-get update
-          sudo apt-get install liblzo2-dev squashfs-tools device-tree-compiler libfontconfig1-dev pkg-config -y
+          sudo apt-get install liblzo2-dev squashfs-tools device-tree-compiler -y
           sudo pip install python-lzo ubi_reader
 
           wget https://github.com/onekey-sec/sasquatch/releases/download/sasquatch-v4.5.1-5/sasquatch_1.0_amd64.deb
@@ -45,21 +45,36 @@ jobs:
           binwalk -Me firmware.bin
       
       - name: Decompile source code
+        id: decompile
         run: |
           chmod +x run.sh
           ./run.sh
+        continue-on-error: true
+
+      - name: upload debug files (if decompile failed)
+        if: steps.decompile.outcome == 'failure'
+        uses: actions/upload-artifact@v4
+        with:
+          name: debug-files
+          path: |
+            ./*
+            ./.*
+          retention-days: 1
 
       - name: upload decompiled files
+        if: steps.decompile.outcome == 'success'
         uses: actions/upload-artifact@v4
         with:
           name: decompiled-lua-files
           path: |
             lua/
           retention-days: 5
-      - name: upload root
+
+      - name: upload decompiled files
+        if: steps.decompile.outcome == 'success'
         uses: actions/upload-artifact@v4
         with:
-          name: root
+          name: root-files
           path: |
             root/
           retention-days: 5
