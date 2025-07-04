@@ -1,0 +1,65 @@
+name: unpack
+run-name: unpack by @${{ github.actor }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      firmware_url:
+        description: '请输入固件下载链接'
+        required: true
+        type: string
+
+jobs:
+  download_firmware:
+    runs-on: ubuntu-latest
+    steps:
+
+      - name: checkout
+        uses: actions/checkout@v4
+      - name: Install tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install liblzo2-dev squashfs-tools device-tree-compiler libfontconfig1-dev pkg-config -y
+          sudo pip install python-lzo ubi_reader
+
+          wget https://github.com/onekey-sec/sasquatch/releases/download/sasquatch-v4.5.1-5/sasquatch_1.0_amd64.deb
+          sudo dpkg -i sasquatch_1.0_amd64.deb
+
+          git clone https://github.com/NyaMisty/unluac_miwifi.git
+          cd unluac_miwifi
+          mkdir build
+          javac -d build -sourcepath src  src/unluac/*.java
+          jar -cfm build/unluac.jar src/META-INF/MANIFEST.MF -C build .
+
+      - name: Install binwalk from crates.io
+        uses: baptiste0928/cargo-install@v3
+        with:
+          crate: binwalk
+
+      - name: Download firmware
+        run: |
+          curl -L "${{ github.event.inputs.firmware_url }}" -o firmware.bin
+
+      - name: Unpack firmware
+        run: |
+          binwalk -Me firmware.bin
+      
+      - name: Decompile source code
+        run: |
+          chmod +x run.sh
+          ./run.sh
+
+      - name: upload decompiled files
+        uses: actions/upload-artifact@v4
+        with:
+          name: decompiled-lua-files
+          path: |
+            lua/
+          retention-days: 5
+      - name: upload root
+        uses: actions/upload-artifact@v4
+        with:
+          name: root
+          path: |
+            root/
+          retention-days: 5
