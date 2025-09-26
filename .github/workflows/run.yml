@@ -20,6 +20,7 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install liblzo2-dev squashfs-tools device-tree-compiler -y
+          sudo apt-get install -y libfontconfig1-dev pkg-config
           sudo pip install python-lzo ubi_reader --ignore-installed
 
           wget https://github.com/onekey-sec/sasquatch/releases/download/sasquatch-v4.5.1-5/sasquatch_1.0_amd64.deb
